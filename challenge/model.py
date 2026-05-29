@@ -30,6 +30,7 @@ class DelayModel:
     ]
 
     MODEL_PATH = Path(__file__).resolve().parent / "delay_model.joblib"
+    DATA_PATH = Path(__file__).resolve().parents[1] / "data" / "data.csv"
 
     def __init__(self):
         self._model = None
@@ -107,6 +108,24 @@ class DelayModel:
         )
         self._model.fit(features, target_series)
 
+    def ensure_model_is_ready(self) -> None:
+        """
+        Ensure the model is available for prediction.
+
+        Loads a persisted artifact when available. If no artifact exists, trains once
+        from the bundled dataset as a local/test fallback.
+        """
+        if self.is_fitted:
+            return
+
+        if self.MODEL_PATH.exists():
+            self.load()
+            return
+
+        data = pd.read_csv(self.DATA_PATH)
+        self.fit_from_data(data)
+        self.save()
+
     def fit_from_data(
         self,
         data: pd.DataFrame,
@@ -137,9 +156,7 @@ class DelayModel:
         Returns:
             (List[int]): predicted targets.
         """
-        if not self.is_fitted:
-            raise ValueError("Model has not been fitted or loaded.")
-
+        self.ensure_model_is_ready()
         self._validate_preprocessed_features(features)
 
         predictions = self._model.predict(features)
