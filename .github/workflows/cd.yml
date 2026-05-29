@@ -36,4 +36,8 @@ jobs:
             --source . \
             --region "$REGION" \
             --project "$PROJECT_ID" \
-            --allow-unauthenticated
+            --allow-unauthenticated \
+            --memory "512Mi" \
+            --cpu "1" \
+            --min-instances "1" \
+            --max-instances "3"
