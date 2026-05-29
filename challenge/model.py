@@ -122,7 +122,7 @@ class DelayModel:
             self.load()
             return
 
-        data = pd.read_csv(self.DATA_PATH)
+        data = pd.read_csv(self.DATA_PATH, low_memory=False)
         self.fit_from_data(data)
         self.save()
 
