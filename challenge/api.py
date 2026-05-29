@@ -1,4 +1,6 @@
 import logging
+from collections.abc import AsyncIterator
+from contextlib import asynccontextmanager
 from enum import Enum, IntEnum
 from functools import lru_cache
 from pathlib import Path
@@ -8,7 +10,7 @@ import fastapi
 import pandas as pd
 from fastapi.exceptions import RequestValidationError
 from fastapi.responses import JSONResponse
-from pydantic import BaseModel, field_validator
+from pydantic import BaseModel, Field, field_validator
 
 from challenge.model import AIRLINE_COL, DelayModel
 
@@ -65,15 +67,32 @@ class FlightSchema(BaseModel):
 
 
 class PredictionRequestSchema(BaseModel):
-    flights: List[FlightSchema]
+    flights: List[FlightSchema] = Field(min_length=1)
 
 
 class PredictionResponseSchema(BaseModel):
     predict: List[int]
 
 
-app = fastapi.FastAPI()
 model = DelayModel()
+
+
+@asynccontextmanager
+async def lifespan(app: fastapi.FastAPI) -> AsyncIterator[None]:
+    """
+    Initialize the model once during application startup.
+
+    The model is loaded from a persisted artifact when available. If the artifact
+    does not exist, it is trained once from the bundled dataset as a local/test
+    fallback. Prediction requests never trigger repeated training.
+    """
+    model.ensure_model_is_ready()
+    logger.info("Delay model is ready for prediction")
+    yield
+
+
+
+app = fastapi.FastAPI(lifespan=lifespan)
 
 
 @app.get("/health", status_code=200)
@@ -95,18 +114,6 @@ async def validation_exception_handler(
         status_code=400,
         content={"detail": exc.errors()},
     )
-
-@app.on_event("startup")
-def load_model() -> None:
-    """
-    Initialize the model once during application startup.
-
-    The model is loaded from a persisted artifact when available. If the artifact
-    does not exist, it is trained once from the bundled dataset as a local/test
-    fallback. Prediction requests never trigger repeated training.
-    """
-    model.ensure_model_is_ready()
-    logger.info("Delay model is ready for prediction")
 
 @app.post("/predict", status_code=200, response_model=PredictionResponseSchema)
 async def post_predict(
