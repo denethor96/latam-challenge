@@ -1,0 +1,29 @@
+# Local environments and caches
+.venv/
+.pytest_cache/
+__pycache__/
+*.py[cod]
+
+# Git and local metadata
+.git/
+.DS_Store
+__MACOSX/
+
+# Test and development artifacts
+tests/
+reports/
+htmlcov/
+.coverage
+
+# Documentation and notebooks not needed at runtime
+docs/
+workflows/
+challenge/exploration.ipynb
+
+# Build artifacts
+dist/
+build/
+*.egg-info/
+
+# Local model artifacts
+*.joblib
